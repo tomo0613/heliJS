@@ -74,7 +74,7 @@ function init() {
         gScene.background = skyBox;
     }).catch(e => console.error(e));
 
-    utils.loadResource('collada', 'resources/models/ah6.dae').then((collada: THREE.ColladaModel) => {
+    utils.loadResource('collada', '../resources/models/ah6.dae').then((collada: THREE.ColladaModel) => {
         const model = collada.scene;
         const body = bodies.heli;
         const rotorMaterial = new THREE.MeshBasicMaterial({color: 0x555555});
