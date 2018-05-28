@@ -20,7 +20,6 @@ const fuse = FuseBox.init({
     target: 'browser',
     sourceMaps: devMode,
     cache: devMode,
-    hash: !devMode,
 });
 
 const app = fuse.bundle('bundle').instructions('>index.ts');

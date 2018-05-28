@@ -7,7 +7,7 @@ import bodies from './bodies';
 import gState from './state';
 
 import HUD from './hud';
-import constants from './constants';
+import _C from './constants';
 import utils from './utils';
 
 type Vec3 = CANNON.Vec3 & THREE.Vector3;
@@ -15,8 +15,11 @@ type Quat = CANNON.Quaternion & THREE.Quaternion;
 type ColladaObjectProps = {
     material: THREE.MeshPhongMaterial|THREE.MeshBasicMaterial|THREE.MeshLambertMaterial;
 };
+type MeshOptions = {
+    enableShadows?: boolean;
+};
 type Heli = {
-    model: THREE.Scene;
+    scene: THREE.Scene;
     methods: {
         applyControls(state: typeof gState): void;
         applyPhysics(): void;
@@ -32,7 +35,7 @@ interface Models {
 let paused: boolean = false;
 
 const gWorld = new CANNON.World();
-gWorld.gravity.set(constants.gravity.x, constants.gravity.y, constants.gravity.z);
+gWorld.gravity.set(_C.gravity.x, _C.gravity.y, _C.gravity.z);
 gWorld.broadphase = new CANNON.NaiveBroadphase();
 gWorld.solver.iterations = 5;
 
@@ -53,8 +56,7 @@ gCamera.position.set(0, 4, 20);
 
 const gModels: Models = {};
 
-// let gDebugRenderer: IDebugRenderer;
-let gDebugRenderer: IDebugRenderer = CannonDebugRenderer(gScene, gWorld);
+let gDebugRenderer: IDebugRenderer;
 
 const hud = HUD();
 document.body.appendChild(hud.domElement);
@@ -62,7 +64,8 @@ document.body.appendChild(hud.domElement);
 init();
 
 function init() {
-    gWorld.addBody(bodies.ground);
+    gWorld.addBody(bodies.terrain);
+    gScene.add(heightFieldToMesh(bodies.terrain));
 
     utils.loadResource('image', '../resources/images/skybox.jpg').then((img: ImageBitmap) => {
         const skyBox = new THREE.CubeTexture(utils.sliceCubeTexture(img));
@@ -98,7 +101,7 @@ function init() {
             }
         });
 
-        body.position.set(0, 3 + 2, 0); // initialPosition
+        body.position.set(0, 3, 0); // initialPosition
         body.linearDamping = 0.5;
         body.angularDamping = 0.9;
 
@@ -106,9 +109,11 @@ function init() {
         gWorld.addBody(body);
 
         let rotation = 0;
+        const d1 = Math.PI / 180;
+        const d360 = Math.PI * 2;
         const rotateRotors = (state: typeof gState) => {
-            const speed = Math.PI / 180 * state.torque;
-            rotation = rotation > Math.PI * 2 ? rotation - Math.PI * 2 + speed : rotation + speed;
+            const speed = d1 * state.torque;
+            rotation = rotation > d360 ? rotation - d360 + speed : rotation + speed;
 
             setRotation.main(-rotation);
             setRotation.tail(-rotation);
@@ -144,7 +149,7 @@ function init() {
         };
 
         gModels.heli = {
-            model,
+            scene: model,
             methods: {
                 applyControls,
                 applyPhysics,
@@ -162,11 +167,11 @@ function render() {
         return;
     }
 
-    gWorld.step(constants.timeStep);
+    gWorld.step(_C.timeStep);
 
     gState.update();
 
-    hud.update({torque: gState.torque, altitude: gModels.heli.model.position.y});
+    hud.update({torque: gState.torque, altitude: gModels.heli.scene.position.y});
 
     animateHeli();
 
@@ -184,6 +189,53 @@ function animateHeli() {
     gModels.heli.methods.rotateRotors(gState);
     gModels.heli.methods.applyPhysics();
     gModels.heli.methods.updateCameraControls();
+}
+
+function heightFieldToMesh(body: CANNON.Body, options: MeshOptions = {}): THREE.Object3D {
+    const shape = body.shapes[0] as CANNON.Heightfield;
+    const geometry = new THREE.Geometry();
+    const material = new THREE.MeshLambertMaterial({color: 0xB59058});
+    const v0 = new CANNON.Vec3();
+    const v1 = new CANNON.Vec3();
+    const v2 = new CANNON.Vec3();
+
+    for (let i = 0; i < shape.data.length - 1; i++) {
+        for (let j = 0; j < shape.data[i].length - 1; j++) {
+            for (let k = 0; k < 2; k++) {
+                shape.getConvexTrianglePillar(i, j, k === 0);
+
+                v0.copy(shape.pillarConvex.vertices[0]);
+                v1.copy(shape.pillarConvex.vertices[1]);
+                v2.copy(shape.pillarConvex.vertices[2]);
+                v0.vadd(shape.pillarOffset, v0);
+                v1.vadd(shape.pillarOffset, v1);
+                v2.vadd(shape.pillarOffset, v2);
+
+                geometry.vertices.push(
+                  new THREE.Vector3(v0.x, v0.y, v0.z),
+                  new THREE.Vector3(v1.x, v1.y, v1.z),
+                  new THREE.Vector3(v2.x, v2.y, v2.z),
+                );
+
+                const n = geometry.vertices.length - 3;
+                geometry.faces.push(new THREE.Face3(n, n + 1, n + 2));
+            }
+        }
+    }
+
+    geometry.computeBoundingSphere();
+    geometry.computeFaceNormals();
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.receiveShadow = options.enableShadows;
+    mesh.castShadow = options.enableShadows;
+    mesh.position.set(body.position.x, body.position.y, body.position.z);
+    mesh.quaternion.set(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
+
+    const obj = new THREE.Object3D();
+    obj.add(mesh);
+
+    return obj;
 }
 
 function getAspectRatio() {

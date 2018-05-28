@@ -129,23 +129,18 @@ export function CannonDebugRenderer(gScene: THREE.Scene, gWorld: CANNON.World, o
         switch (shape.type) {
             case CANNON.Shape.types.SPHERE:
                 return new THREE.Mesh(sphereGeometry, material);
-
             case CANNON.Shape.types.BOX:
                 return new THREE.Mesh(boxGeometry, material);
-
             case CANNON.Shape.types.PLANE:
                 return new THREE.Mesh(planeGeometry, material);
-
             case CANNON.Shape.types.CONVEXPOLYHEDRON:
                 const convexPolyhedronGeometry = createConvexPolyhedronGeometry(shape);
                 shape.geometryId = convexPolyhedronGeometry.id;
                 return new THREE.Mesh(convexPolyhedronGeometry, material);
-
             case CANNON.Shape.types.TRIMESH:
                 const trimeshGeometry = createTrimeshGeometry(shape);
                 shape.geometryId = trimeshGeometry.id;
                 return new THREE.Mesh(trimeshGeometry, material);
-
             case CANNON.Shape.types.HEIGHTFIELD:
                 const heightfieldGeometry = createHeightfieldGeometry(shape);
                 shape.geometryId = heightfieldGeometry.id;

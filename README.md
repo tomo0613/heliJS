@@ -6,5 +6,14 @@
 
 ![screenshot](/screenshot.jpg?raw=true "screenshot")
 
+#### Controls
+- W / S : rotate X
+- Q / E : rotate Y
+- A / D : rotate Z
+- \+ / \- : torque
+- P : pause
+- 'Mouse can control camera (LMB|Wheel: zoom / RMB: orbit)
+- type in console: "debug = 1" to turn on debug mode
+
 [THREE.JS]: <https://threejs.org/examples/>
 [CANNON.JS]: <http://schteppe.github.io/cannon.js/>
