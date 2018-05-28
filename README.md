@@ -4,6 +4,7 @@
 - Graphics -> [THREE.JS]
 - Physics -> [CANNON.JS]
 
+[index.html]
 ![screenshot](/screenshot.jpg?raw=true "screenshot")
 
 #### Controls
@@ -17,3 +18,4 @@
 
 [THREE.JS]: <https://threejs.org/examples/>
 [CANNON.JS]: <http://schteppe.github.io/cannon.js/>
+[index.html]: <https://rawgit.com/tomo0613/HeliJS/master/build/index.html/>
