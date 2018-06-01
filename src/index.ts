@@ -1,8 +1,8 @@
 import './style.css';
 import * as THREE from 'three';
-import OrbitControls from 'orbit-controls-es6';
 import * as CANNON from 'cannon';
 import {CannonDebugRenderer, IDebugRenderer} from './CannonDebugRenderer';
+import CameraHelper from './cameraHelper';
 import bodies from './bodies';
 import gState from './state';
 
@@ -24,7 +24,6 @@ type Heli = {
         applyControls(state: typeof gState): void;
         applyPhysics(): void;
         rotateRotors(state: typeof gState): void;
-        updateCameraControls(): void;
     }
 };
 
@@ -41,6 +40,7 @@ gWorld.solver.iterations = 5;
 
 const gScene = new THREE.Scene();
 const gCamera = new THREE.PerspectiveCamera(45, getAspectRatio(), 0.1, 1000);
+const cameraHelper = CameraHelper(gCamera);
 const gRenderer = new THREE.WebGLRenderer(/*{antialias: true}*/);
 gRenderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(gRenderer.domElement);
@@ -52,16 +52,18 @@ sunLight.position.set(-1, 0.5, -1).normalize();
 gScene.add(ambientLight);
 gScene.add(sunLight); // ToDo fix THREE types (Object3D.add(): should return Object3D , to be able to chain)
 
-gCamera.position.set(0, 4, 20);
-
 const gModels: Models = {};
-
-let gDebugRenderer: IDebugRenderer;
-
 const hud = HUD();
 document.body.appendChild(hud.domElement);
 
+let gDebugRenderer: IDebugRenderer;
+let updateCamera = () => {};
+
 init();
+
+function switchCamera () {
+    updateCamera = cameraHelper.getNextCamera(gModels.heli.scene);
+}
 
 function init() {
     gWorld.addBody(bodies.terrain);
@@ -101,7 +103,7 @@ function init() {
             }
         });
 
-        body.position.set(0, 3, 0); // initialPosition
+        body.position.set(0, 3, 0); // initial model position
         body.linearDamping = 0.5;
         body.angularDamping = 0.9;
 
@@ -109,27 +111,27 @@ function init() {
         gWorld.addBody(body);
 
         let rotation = 0;
-        const d1 = Math.PI / 180;
-        const d360 = Math.PI * 2;
+        const deg1 = Math.PI / 180;
+        const deg360 = Math.PI * 2;
         const rotateRotors = (state: typeof gState) => {
-            const speed = d1 * state.torque;
-            rotation = rotation > d360 ? rotation - d360 + speed : rotation + speed;
+            const speed = deg1 * state.torque;
+            rotation = rotation > deg360 ? rotation - deg360 + speed : rotation + speed;
 
             setRotation.main(-rotation);
             setRotation.tail(-rotation);
         };
 
         const applyControls = (state: typeof gState) => {
-            const movementDirection = body.quaternion.vmult(
-                new CANNON.Vec3(state.pitchSpeed, state.yawSpeed, state.rollSpeed),
+            const rotationForce = body.quaternion.vmult(
+                new CANNON.Vec3(state.pitchForce, state.yawForce, state.rollForce),
             );
             const accelerationForce = body.quaternion.vmult(new CANNON.Vec3(0, state.torque, 0));
             const center = [body.position.x, body.position.y - 0.5, body.position.z];
 
             body.applyForce(accelerationForce, new CANNON.Vec3(...center));
 
-            if (!movementDirection.isZero()) {
-                body.angularVelocity.set(movementDirection.x, movementDirection.y, movementDirection.z);
+            if (!rotationForce.isZero()) {
+                body.angularVelocity.set(rotationForce.x, rotationForce.y, rotationForce.z);
             }
         };
 
@@ -138,26 +140,16 @@ function init() {
             model.quaternion.copy(body.quaternion as Quat);
         };
 
-        model.add(gCamera);
-
-        const cameraControls: THREE.OrbitControls = new OrbitControls(gCamera);
-        cameraControls.minDistance = 10;
-        cameraControls.mouseButtons = {
-            ORBIT: THREE.MOUSE.RIGHT,
-            ZOOM: THREE.MOUSE.LEFT,
-            PAN: THREE.MOUSE.MIDDLE,
-        };
-
         gModels.heli = {
             scene: model,
             methods: {
                 applyControls,
                 applyPhysics,
                 rotateRotors,
-                updateCameraControls: cameraControls.update,
             },
         };
 
+        switchCamera();
         render();
     }).catch(e => console.error(e));
 }
@@ -174,6 +166,7 @@ function render() {
     hud.update({torque: gState.torque, altitude: gModels.heli.scene.position.y});
 
     animateHeli();
+    updateCamera();
 
     if (gDebugRenderer) {
         gDebugRenderer.update();
@@ -188,7 +181,6 @@ function animateHeli() {
     gModels.heli.methods.applyControls(gState);
     gModels.heli.methods.rotateRotors(gState);
     gModels.heli.methods.applyPhysics();
-    gModels.heli.methods.updateCameraControls();
 }
 
 function heightFieldToMesh(body: CANNON.Body, options: MeshOptions = {}): THREE.Object3D {
@@ -263,15 +255,19 @@ Object.defineProperty(window, 'debug', {
 });
 
 window.addEventListener('keyup', (e) => {
-    if (e.key !== 'p') {
-        return;
+    // if (e.key === 'h') console.log('h');
+
+    if (e.key === 'c') {
+        switchCamera();
     }
 
-    if (paused) {
-        paused = false;
-        render();
-    } else {
-        paused = true;
-        console.info('Pause');
+    if (e.key === 'p') {
+        if (paused) {
+            paused = false;
+            render();
+        } else {
+            paused = true;
+            console.info('Pause');
+        }
     }
 });

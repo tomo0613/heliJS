@@ -2,26 +2,29 @@ import constants from './constants';
 
 interface State {
     torque: number;
-    pitchSpeed: number;
-    rollSpeed: number;
-    yawSpeed: number;
+    pitchForce: number;
+    rollForce: number;
+    yawForce: number;
     update(): void;
 }
 
 interface Actions {
     increaseTorque(): void;
     decreaseTorque(): void;
-    setPitch(direction: -1|0|1): void;
-    setRoll(direction: -1|0|1): void;
-    setYaw(direction: -1|0|1): void;
+    setPitch(direction: number): void;
+    setRoll(direction: number): void;
+    setYaw(direction: number): void;
 }
 
 export default (function() {
     const keysPressed: Set<string> = new Set();
-    const isKeyPressed = (key: string) => keysPressed.has(key);
+    const isKeyDown = (key: string) => keysPressed.has(key);
     let torque = 0;
+    let pitchForce = 0;
     let pitchSpeed = 0;
+    let rollForce = 0;
     let rollSpeed = 0;
+    let yawForce = 0;
     let yawSpeed = 0;
 
     window.onkeydown = (e) => keysPressed.add(e.key) && preventPageScrolling(e);
@@ -30,39 +33,45 @@ export default (function() {
     const actions: Actions = {
         increaseTorque: () => torque = Math.min(torque + constants.power, constants.maxTorque),
         decreaseTorque: () => torque = Math.max(torque - constants.power, 0),
-        setPitch: (direction) => pitchSpeed = 0.5 * direction * Math.min(torque / 100, 1),
-        setRoll: (direction) => rollSpeed = 0.5 * direction * Math.min(torque / 100, 1),
-        setYaw: (direction) => yawSpeed = 1 * direction * Math.min(torque / 100, 1),
+        setPitch: (direction) => pitchForce = direction * Math.min(torque / 100, 1),
+        setRoll: (direction) => rollForce = direction * Math.min(torque / 100, 1),
+        setYaw: (direction) => yawForce = direction * Math.min(torque / 100, 1),
     };
 
     function updateState() {
-        if (isKeyPressed('+')) {
+        if (isKeyDown('+')) {
             actions.increaseTorque();
-        } else if (isKeyPressed('-')) {
+        } else if (isKeyDown('-')) {
             actions.decreaseTorque();
         }
         // rotate on X axis [forth|back]
-        if (isKeyPressed('w')) {
-            actions.setPitch(-1);
-        } else if (isKeyPressed('s')) {
-            actions.setPitch(1);
+        if (isKeyDown('w') || isKeyDown('s')) {
+            const pitchDirection = isKeyDown('w') ? -1 : 1;
+
+            pitchSpeed = Math.min(pitchSpeed + 0.05, 1);
+            actions.setPitch(pitchDirection * pitchSpeed);
         } else {
+            pitchSpeed = 0;
             actions.setPitch(0);
         }
         // rotate on Z axis [left|right]
-        if (isKeyPressed('a')) {
-            actions.setRoll(1);
-        } else if (isKeyPressed('d')) {
-            actions.setRoll(-1);
+        if (isKeyDown('a') || isKeyDown('d')) {
+            const rollDirection = isKeyDown('a') ? 1 : -1;
+
+            rollSpeed = Math.min(rollSpeed + 0.05, 1);
+            actions.setRoll(rollDirection * rollSpeed);
         } else {
+            rollSpeed = 0;
             actions.setRoll(0);
         }
         // rotate on Y axis [left|right]
-        if (isKeyPressed('q')) {
-            actions.setYaw(1);
-        } else if (isKeyPressed('e')) {
-            actions.setYaw(-1);
+        if (isKeyDown('q') || isKeyDown('e')) {
+            const yawDirection = isKeyDown('q') ? 1 : -1;
+
+            yawSpeed = Math.min(yawSpeed + 0.05, 1);
+            actions.setYaw(yawDirection * yawSpeed);
         } else {
+            yawSpeed = 0;
             actions.setYaw(0);
         }
     }
@@ -71,14 +80,14 @@ export default (function() {
         get torque() {
             return torque;
         },
-        get pitchSpeed() {
-            return pitchSpeed;
+        get pitchForce() {
+            return pitchForce;
         },
-        get rollSpeed() {
-            return rollSpeed;
+        get rollForce() {
+            return rollForce;
         },
-        get yawSpeed() {
-            return yawSpeed;
+        get yawForce() {
+            return yawForce;
         },
         update: updateState,
     } as State;
