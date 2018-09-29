@@ -16,6 +16,23 @@ interface Actions {
     setYaw(direction: number): void;
 }
 
+const keys = {
+    increaseTorque: '+',
+    decreaseTorque: '-',
+    pitchForward: 'w',
+    pitchBack: 's',
+    rollLeft: 'a',
+    rollRight: 'd',
+    yawLeft: 'q',
+    yawRight: 'e',
+};
+
+Object.defineProperty(window, 'controls', {
+    get() {
+        return keys;
+    },
+});
+
 export default (function() {
     const keysPressed: Set<string> = new Set();
     const isKeyDown = (key: string) => keysPressed.has(key);
@@ -39,14 +56,14 @@ export default (function() {
     };
 
     function updateState() {
-        if (isKeyDown('+')) {
+        if (isKeyDown(keys.increaseTorque)) {
             actions.increaseTorque();
-        } else if (isKeyDown('-')) {
+        } else if (isKeyDown(keys.decreaseTorque)) {
             actions.decreaseTorque();
         }
         // rotate on X axis [forth|back]
-        if (isKeyDown('w') || isKeyDown('s')) {
-            const pitchDirection = isKeyDown('w') ? -1 : 1;
+        if (isKeyDown(keys.pitchForward) || isKeyDown(keys.pitchBack)) {
+            const pitchDirection = isKeyDown(keys.pitchForward) ? -1 : 1;
 
             pitchSpeed = Math.min(pitchSpeed + 0.05, 1);
             actions.setPitch(pitchDirection * pitchSpeed);
@@ -55,8 +72,8 @@ export default (function() {
             actions.setPitch(0);
         }
         // rotate on Z axis [left|right]
-        if (isKeyDown('a') || isKeyDown('d')) {
-            const rollDirection = isKeyDown('a') ? 1 : -1;
+        if (isKeyDown(keys.rollLeft) || isKeyDown(keys.rollRight)) {
+            const rollDirection = isKeyDown(keys.rollLeft) ? 1 : -1;
 
             rollSpeed = Math.min(rollSpeed + 0.05, 1);
             actions.setRoll(rollDirection * rollSpeed);
@@ -65,8 +82,8 @@ export default (function() {
             actions.setRoll(0);
         }
         // rotate on Y axis [left|right]
-        if (isKeyDown('q') || isKeyDown('e')) {
-            const yawDirection = isKeyDown('q') ? 1 : -1;
+        if (isKeyDown(keys.yawLeft) || isKeyDown(keys.yawRight)) {
+            const yawDirection = isKeyDown(keys.yawLeft) ? 1 : -1;
 
             yawSpeed = Math.min(yawSpeed + 0.05, 1);
             actions.setYaw(yawDirection * yawSpeed);
