@@ -4,7 +4,7 @@
 - Graphics -> [THREE.JS]
 - Physics -> [CANNON.JS]
 
-[index.html]
+[DEMO]
 ![screenshot](/screenshot.jpg?raw=true "screenshot")
 
 #### Controls
