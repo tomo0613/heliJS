@@ -19,4 +19,4 @@
 
 [THREE.JS]: <https://threejs.org/examples/>
 [CANNON.JS]: <http://schteppe.github.io/cannon.js/>
-[index.html]: <https://rawgit.com/tomo0613/HeliJS/master/build/index.html>
+[DEMO]: <https://tomo0613.github.io/HeliJS/>
