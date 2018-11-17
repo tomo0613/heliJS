@@ -3,11 +3,8 @@ import OrbitControls from 'orbit-controls-es6';
 
 export default function (camera: THREE.Camera) {
     const orbitCamera: THREE.OrbitControls = new OrbitControls(camera);
-    const dist = 20; // ToDo change on scroll
 
-    let cameraId = 0;
-
-    (<any>orbitCamera).position0 = new THREE.Vector3(0, 4, 20); // ToDo fix types
+    (<any>orbitCamera).position0 = new THREE.Vector3(0, 5, 20); // ToDo fix types
     orbitCamera.minDistance = 10;
     orbitCamera.mouseButtons = {
         ORBIT: THREE.MOUSE.RIGHT,
@@ -15,20 +12,23 @@ export default function (camera: THREE.Camera) {
         PAN: THREE.MOUSE.MIDDLE,
     };
 
-    return {
-        getNextCamera,
-    };
+    const dist = 20; // ToDo change on scroll
+    const cameraTargetPosition = new THREE.Vector3();
+    const cameraOffset = new THREE.Vector3();
+    const rotationMatrix = new THREE.Matrix4();
 
     function updateChaseCamera(target: THREE.Scene) {
-        const offset = new THREE.Vector3(0, 0, dist);
-        const rotationMatrix = new THREE.Matrix4().makeRotationFromQuaternion(target.quaternion);
+        cameraOffset.set(0, 5, dist);
+        rotationMatrix.makeRotationFromQuaternion(target.quaternion);
 
-        offset.applyMatrix4(rotationMatrix);
-        offset.y = 5;
+        cameraOffset.applyMatrix4(rotationMatrix);
+        cameraTargetPosition.copy(target.position).add(cameraOffset);
 
-        camera.position.copy(target.position).add(offset);
+        camera.position.lerp(cameraTargetPosition, 0.1);
         camera.lookAt(target.position);
     }
+
+    let cameraId = 0;
 
     function getNextCamera(target: THREE.Scene) {
         switch (cameraId++) {
@@ -53,4 +53,8 @@ export default function (camera: THREE.Camera) {
                 return getNextCamera(target);
         }
     }
+
+    return {
+        getNextCamera,
+    };
 }

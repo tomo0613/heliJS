@@ -121,17 +121,21 @@ function init() {
             setRotation.tail(-rotation);
         };
 
+        const rotationForce = new CANNON.Vec3();
+        const accelerationForce = new CANNON.Vec3();
+        const mainRotorPosition = new CANNON.Vec3();
         const applyControls = (state: typeof gState) => {
-            const rotationForce = body.quaternion.vmult(
-                new CANNON.Vec3(state.pitchForce, state.yawForce, state.rollForce),
-            );
-            const accelerationForce = body.quaternion.vmult(new CANNON.Vec3(0, state.torque, 0));
-            const center = [body.position.x, body.position.y - 0.5, body.position.z];
+            rotationForce.set(state.pitchForce, state.yawForce, state.rollForce);
+            accelerationForce.set(0, state.torque, 0);
+            mainRotorPosition.set(body.position.x, body.position.y - 0.5, body.position.z);
 
-            body.applyForce(accelerationForce, new CANNON.Vec3(...center));
+            body.quaternion.vmult(rotationForce, rotationForce);
+            body.quaternion.vmult(accelerationForce, accelerationForce);
+
+            body.applyForce(accelerationForce, mainRotorPosition);
 
             if (!rotationForce.isZero()) {
-                body.angularVelocity.set(rotationForce.x, rotationForce.y, rotationForce.z);
+                body.angularVelocity.copy(rotationForce);
             }
         };
 
