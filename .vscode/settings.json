@@ -1,0 +1,18 @@
+{
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
+    "cSpell.words": [
+        "Broadphase",
+        "GLTF",
+        "heli",
+        "lerp",
+        "Phong",
+        "Raycast",
+        "raycaster",
+        "skybox",
+        "Unmount",
+        "vadd",
+        "vsub"
+    ]
+}

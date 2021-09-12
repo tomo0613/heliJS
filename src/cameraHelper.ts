@@ -1,21 +1,21 @@
-import * as THREE from 'three';
-import OrbitControls from 'orbit-controls-es6';
+import { Camera, Vector3, Matrix4 } from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-export default function (camera: THREE.Camera) {
-    const orbitCamera: THREE.OrbitControls = new OrbitControls(camera);
+export default function (camera: Camera, domElement: HTMLCanvasElement) {
+    const orbitCamera = new OrbitControls(camera, domElement);
 
-    (<any>orbitCamera).position0 = new THREE.Vector3(0, 5, 20); // ToDo fix types
+    // orbitCamera.position0 = new Vector3(0, 5, 20); 
     orbitCamera.minDistance = 10;
-    orbitCamera.mouseButtons = {
-        ORBIT: THREE.MOUSE.RIGHT,
-        ZOOM: THREE.MOUSE.LEFT,
-        PAN: THREE.MOUSE.MIDDLE,
-    };
+//     orbitCamera.mouseButtons = {
+//         ORBIT: THREE.MOUSE.RIGHT,
+//         ZOOM: THREE.MOUSE.LEFT,
+//         PAN: THREE.MOUSE.MIDDLE,
+//     };
 
     const dist = 20; // ToDo change on scroll
-    const cameraTargetPosition = new THREE.Vector3();
-    const cameraOffset = new THREE.Vector3();
-    const rotationMatrix = new THREE.Matrix4();
+    const cameraTargetPosition = new Vector3();
+    const cameraOffset = new Vector3();
+    const rotationMatrix = new Matrix4();
 
     function updateChaseCamera(target: THREE.Scene) {
         cameraOffset.set(0, 5, dist);

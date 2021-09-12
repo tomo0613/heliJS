@@ -1,104 +1,152 @@
-import {ImageLoader} from 'three';
-import * as ColladaLoader from 'three-collada-loader-2';
+import { ImageLoader } from 'three';
+import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-type ResourceType = 'image'|'collada';
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+export function noop() {}
 
-function Utils() {
-    const loadResource = (resourceType: ResourceType, resourceUrl: string): Promise<any> => {
-        let loader;
+type ResourceType = GLTF|HTMLImageElement;
 
-        switch (resourceType) {
-            case 'image':
-                loader = new ImageLoader();
-                break;
-            case 'collada':
-                loader = new ColladaLoader();
-                break;
-            default:
-                return Promise.reject(new Error('unknown resource type [' + resourceType + ']'));
-        }
+export function loadResource<T extends ResourceType>(url: string, size = '?'): Promise<T> {
+    const extension = url.split('.').pop();
+    let loader: ImageLoader|GLTFLoader;
 
-        return new Promise((resolve, reject) => {
-            const onLoad = (resource)  => resolve(resource);
-            const onProgress = () => {};
-            const onError = (e)  => {
-                console.error('Failed to load resource: ' + e.target.src);
-                reject(e);
-            };
+    switch (extension) {
+        case 'jpg':
+            loader = new ImageLoader();
+            break;
+        case 'glb':
+        case 'gltf':
+            loader = new GLTFLoader();
+            break;
+        default:
+            return Promise.reject(new Error(`unknown resource type [${extension}]`));
+    }
 
-            loader.load(resourceUrl, onLoad, onProgress, onError);
-        });
-    };
-
-    const sliceCubeTexture = (img: ImageBitmap, imgSize: number = 1024): HTMLCanvasElement[] => {
-        const cubeImageMap = [
-            {x: 2, y: 1},
-            {x: 0, y: 1},
-            {x: 1, y: 0},
-            {x: 1, y: 2},
-            {x: 1, y: 1},
-            {x: 3, y: 1},
-        ];
-
-        return cubeImageMap.map((positionOffset) => getFace(positionOffset.x, positionOffset.y));
-
-        function getFace(x, y) {
-            const canvas = document.createElement('canvas');
-            canvas.width = imgSize;
-            canvas.height = imgSize;
-            canvas.getContext('2d').drawImage(img, -x * imgSize, -y * imgSize);
-
-            return canvas;
-        }
-    };
-
-    const lcFirst = (str: string): string => {
-        return str.charAt(0).toLowerCase() + str.slice(1);
-    };
-
-    // type Callback = (...args: any[]) => void; // ToDo
-
-    // const debounce = <F extends Callback>(fnc: F, delay: number = 200, immediate: boolean = false): F => {
-    const debounce = (fnc: any, delay: number = 200, immediate: boolean = false): any => {
-        let timeoutId: number;
-
-        return (...args) => {
-            if (immediate && !timeoutId) {
-                fnc(...args);
-            }
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => fnc(...args), delay);
+    return new Promise((resolve, reject) => {
+        const onLoad = (resource) => {
+            resolve(resource);
         };
-    };
+        const onError = (e: ErrorEvent) => {
+            // eslint-disable-next-line no-console
+            console.error(`Failed to load resource: ${url}`);
+            reject(e);
+        };
 
-    const throttle = function (fnc, timeToWaitBeforeNextCall = 200) {
-        let timeoutId: number;
-        let prevCallTime: number;
-        let now: number;
+        loader.load(url, onLoad, onProgress, onError);
+    });
 
-        return (...args) => {
-            const nextScheduledCallTime = prevCallTime + timeToWaitBeforeNextCall;
-            now = performance.now();
+    function onProgress({ loaded, total, lengthComputable }: ProgressEvent) {
+        const totalSize = lengthComputable ? `${bytesToReadable(total, 'k')} kB` : size;
 
-            if (!prevCallTime || now > nextScheduledCallTime) {
+        console.info(
+            `Loading resource: ${url} (${bytesToReadable(loaded, 'k')} / ${totalSize})`,
+        );
+    }
+}
+
+function bytesToReadable(value: number, scale: 'k'|'M'|'G'|'T') {
+    let result = value;
+    const n = ['k', 'M', 'G', 'T'].indexOf(scale) + 1;
+
+    for (let i = 0; i < n; i++) {
+        result /= 1024;
+    }
+
+    return result.toFixed(2);
+}
+
+export function sliceCubeTexture(img: HTMLImageElement, imgSize = 1024) {
+    const cubeTextureMap = [
+        { x: 2, y: 1 },
+        { x: 0, y: 1 },
+        { x: 1, y: 0 },
+        { x: 1, y: 2 },
+        { x: 1, y: 1 },
+        { x: 3, y: 1 },
+    ];
+
+    return cubeTextureMap.map(getFace);
+
+    function getFace({ x, y }: { x: number; y: number }) {
+        const canvas = document.createElement('canvas');
+        canvas.width = imgSize;
+        canvas.height = imgSize;
+        canvas.getContext('2d').drawImage(img, -x * imgSize, -y * imgSize);
+
+        return canvas;
+    }
+}
+
+export function debounce(fnc: (...a: any[]) => void, delay = 200, immediate = false) {
+    let timeoutId: number;
+
+    return (...args: unknown[]) => {
+        if (immediate && !timeoutId) {
+            fnc(...args);
+        }
+        clearTimeout(timeoutId);
+        timeoutId = window.setTimeout(() => {
+            if (!immediate) {
                 fnc(...args);
-                prevCallTime = now;
             } else {
-                clearTimeout(timeoutId);
-                timeoutId = setTimeout(() => {
-                    fnc(...args);
-                    prevCallTime = now;
-                }, timeToWaitBeforeNextCall - (now - prevCallTime));
+                timeoutId = undefined;
             }
-        };
-    };
-
-    return {
-        debounce,
-        loadResource,
-        sliceCubeTexture,
-        lcFirst,
+        }, delay);
     };
 }
 
-export default Utils();
+export function throttle(fnc: (...a: any[]) => void, timeToWaitBeforeNextCall = 200) {
+    let timeoutId: number;
+    let prevCallTime: number;
+    let now: number;
+    let nextScheduledCallTime: number;
+
+    return (...args: unknown[]) => {
+        nextScheduledCallTime = prevCallTime + timeToWaitBeforeNextCall;
+        now = performance.now();
+
+        if (!prevCallTime || now > nextScheduledCallTime) {
+            fnc(...args);
+            prevCallTime = now;
+        } else {
+            window.clearTimeout(timeoutId);
+            timeoutId = window.setTimeout(() => {
+                fnc(...args);
+                prevCallTime = now;
+            }, timeToWaitBeforeNextCall - (now - prevCallTime));
+        }
+    };
+}
+
+export function round(n: number) {
+    return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+// export function valueBetween(value: number, min: number, max: number) {
+//     return Math.max(min, Math.min(value, max));
+// }
+
+// function omit<O extends Record<K, unknown>, K extends keyof O = keyof O>(obj: O, ...keysToOmit: K[]) {
+//     return Object.keys(obj).reduce((targetObj, key) => {
+//         if (!keysToOmit.includes(key as K)) {
+//             targetObj[key] = obj[key];
+//         }
+
+//         return targetObj;
+//     }, {} as Omit<O, K>);
+// }
+
+// function pick<O extends Record<K, unknown>, K extends keyof O = keyof O>(obj: O, ...keysToPick: K[]) {
+//     return keysToPick.reduce((targetObj, key) => {
+//         if (obj.hasOwnProperty(key)) {
+//             targetObj[key] = obj[key];
+//         }
+
+//         return targetObj;
+//     }, {} as Pick<O, K>);
+// }
+
+// Object.defineProperties(Object, {
+//     omit: { value: omit },
+//     pick: { value: pick },
+// });

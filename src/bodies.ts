@@ -1,4 +1,10 @@
-import * as CANNON from 'cannon';
+import {
+    Heightfield,
+Body,
+Box,
+Vec3,
+Cylinder, Quaternion
+} from 'cannon-es';
 
 const props = {
     modelMass: 10,
@@ -36,39 +42,39 @@ export default (function bodies () {
 
         const mapRows = heightMap.length;
         const mapColumns = heightMap[0].length;
-        const terrainShape = new CANNON.Heightfield(heightMap, {elementSize: 10});
-        const terrain = new CANNON.Body({mass: 0, shape: terrainShape});
+        const terrainShape = new Heightfield(heightMap, {elementSize: 10});
+        const terrain = new Body({mass: 0, shape: terrainShape});
 
-        terrain.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        terrain.quaternion.setFromAxisAngle(new Vec3(1, 0, 0), -Math.PI / 2);
         terrain.position.set(-mapRows * terrainShape.elementSize / 2, 0, mapColumns * terrainShape.elementSize / 2);
 
         return terrain;
     }
 
     function createHeli() {
-        const heli = new CANNON.Body({mass: props.modelMass});
-        const landingSkidShape = new CANNON.Box(new CANNON.Vec3(0.1, 0.1, 1.8));
-        const heliCenterShape = new CANNON.Box(new CANNON.Vec3(1, 1, 2));
-        const heliTailShape = new CANNON.Box(new CANNON.Vec3(0.2, 0.2, 2));
-        const heliRearShape = new CANNON.Box(new CANNON.Vec3(0.1, 1, 0.2));
-        const heliWingShape = new CANNON.Box(new CANNON.Vec3(1.3, 0.1, 0.2));
-        const rotorCylinderShape = new CANNON.Cylinder(
+        const heli = new Body({mass: props.modelMass});
+        const landingSkidShape = new Box(new Vec3(0.1, 0.1, 1.8));
+        const heliCenterShape = new Box(new Vec3(1, 1, 2));
+        const heliTailShape = new Box(new Vec3(0.2, 0.2, 2));
+        const heliRearShape = new Box(new Vec3(0.1, 1, 0.2));
+        const heliWingShape = new Box(new Vec3(1.3, 0.1, 0.2));
+        const rotorCylinderShape = new Cylinder(
             props.rotorBladeLength * 2,
             props.rotorBladeLength * 2,
             props.rotorBladeThickness * 2,
             10,
         );
 
-        const quat = new CANNON.Quaternion();
-        quat.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI / 2);
+        const quat = new Quaternion();
+        quat.setFromAxisAngle(new Vec3(1, 0, 0), Math.PI / 2);
 
-        heli.addShape(landingSkidShape, new CANNON.Vec3(1.2, -1.9, -0.7))
-            .addShape(landingSkidShape, new CANNON.Vec3(-1.2, -1.9, -0.7))
-            .addShape(heliCenterShape, new CANNON.Vec3(0, 0, 0))
-            .addShape(heliTailShape, new CANNON.Vec3(0, 0.5, 3.8))
-            .addShape(heliRearShape, new CANNON.Vec3(0, 0.5, 6.1))
-            .addShape(heliWingShape, new CANNON.Vec3(0, 1.9, 6.5))
-            .addShape(rotorCylinderShape, new CANNON.Vec3(0, 1.5 , 0), quat);
+        heli.addShape(landingSkidShape, new Vec3(1.2, -1.9, -0.7))
+            .addShape(landingSkidShape, new Vec3(-1.2, -1.9, -0.7))
+            .addShape(heliCenterShape, new Vec3(0, 0, 0))
+            .addShape(heliTailShape, new Vec3(0, 0.5, 3.8))
+            .addShape(heliRearShape, new Vec3(0, 0.5, 6.1))
+            .addShape(heliWingShape, new Vec3(0, 1.9, 6.5))
+            .addShape(rotorCylinderShape, new Vec3(0, 1.5 , 0), quat);
 
         return heli;
     }

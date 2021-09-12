@@ -7,7 +7,7 @@ interface Constants {
 
 export default {
     timeStep: 1 / 60,
-    gravity: {x: 0, y: -10, z: 0},
+    gravity: {x: 0, y: -9.80665, z: 0},
     maxTorque: 200,
     power: 1,
 } as Constants;
