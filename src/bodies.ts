@@ -16,7 +16,7 @@ const props = {
 export default (function bodies () {
     return {
         terrain: createTerrain(),
-        heli: createHeli(),
+        heli: createHeliBody(),
     };
 
     function createTerrain() {
@@ -51,7 +51,7 @@ export default (function bodies () {
         return terrain;
     }
 
-    function createHeli() {
+    function createHeliBody() {
         const heli = new Body({mass: props.modelMass});
         const landingSkidShape = new Box(new Vec3(0.1, 0.1, 1.8));
         const heliCenterShape = new Box(new Vec3(1, 1, 2));
@@ -66,7 +66,7 @@ export default (function bodies () {
         );
 
         const quat = new Quaternion();
-        quat.setFromAxisAngle(new Vec3(1, 0, 0), Math.PI / 2);
+        quat.setFromAxisAngle(new Vec3(0, 1, 0), Math.PI / 2);
 
         heli.addShape(landingSkidShape, new Vec3(1.2, -1.9, -0.7))
             .addShape(landingSkidShape, new Vec3(-1.2, -1.9, -0.7))

@@ -1,3 +1,7 @@
+import { Quaternion, World, SAPBroadphase, Vec3 } from 'cannon-es';
+import cannonDebugRenderer from 'cannon-es-debugger';
+import { AmbientLight, CubeTexture, DirectionalLight, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+
 import CameraHelper from './cameraHelper';
 import bodies from './bodies';
 import gState from './state';
@@ -5,19 +9,14 @@ import gState from './state';
 import HUD from './hud';
 import _C from './constants';
 import * as utils from './utils';
-import { Quaternion, World, SAPBroadphase, Vec3 } from 'cannon-es';
-import { AmbientLight, CubeTexture, DirectionalLight, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
+
 
 type Vector3 = Vec3 & THREE.Vector3;
 type Quat = Quaternion & THREE.Quaternion;
-// type ColladaObjectProps = {
-//     material: THREE.MeshPhongMaterial|THREE.MeshBasicMaterial|THREE.MeshLambertMaterial;
-// };
-type MeshOptions = {
-    enableShadows?: boolean;
-};
+
 type Heli = {
-    scene: THREE.Scene;
+    scene: THREE.Group;
     methods: {
         applyControls(state: typeof gState): void;
         applyPhysics(): void;
@@ -58,100 +57,118 @@ let updateCamera = () => {};
 init();
 
 function switchCamera () {
-    updateCamera = cameraHelper.getNextCamera(gModels.heli.scene);
+    updateCamera = cameraHelper.getNextCamera(gModels.heli.scene as any);
+}
+
+function setSceneBackground(skyboxTexture: HTMLImageElement) {
+    const skyBox = new CubeTexture(utils.sliceCubeTexture(skyboxTexture));
+    skyBox.needsUpdate = true;
+
+    gScene.background = skyBox;
+}
+
+function initHeli({ scene: model }: GLTF) {
+    const body = bodies.heli;
+    const rotorMaterial = new MeshBasicMaterial({color: 0x555555});
+    const setRotation = {
+        main: (rad: number) => {},
+        tail: (rad: number) => {},
+    };
+
+    model.children.forEach((child: any) => {
+        switch (child.name) {
+            case 'MainRotor':
+                child.material = rotorMaterial;
+                setRotation.main = (rad) => child.rotation.y = rad;
+                break;
+            case 'TailRotor':
+                child.material = rotorMaterial;
+                setRotation.tail = (rad) => child.rotation.x = rad;
+                break;
+            case 'HeliBody':
+                // child.material.color.setHex(0xe4e4e4);
+                break;
+            default:
+                break;
+        }
+    });
+
+    body.position.set(0, 3, 0); // initial model position
+    body.linearDamping = 0.5;
+    body.angularDamping = 0.9;
+
+    gScene.add(model);
+    gWorld.addBody(body);
+
+    let rotation = 0;
+    const deg1 = Math.PI / 180;
+    const deg360 = Math.PI * 2;
+
+    const rotateRotors = (state: typeof gState) => {
+        const speed = deg1 * state.torque;
+        rotation = rotation > deg360 ? rotation - deg360 + speed : rotation + speed;
+
+        setRotation.main(-rotation);
+        setRotation.tail(-rotation);
+    };
+
+    const angularVelocity = new Vec3();
+    const liftForce = new Vec3();
+    const mainRotorPosition = new Vec3(0, -0.5, 0);
+
+    const applyControls = (state: typeof gState) => {
+        angularVelocity.set(state.pitchForce, state.yawForce, state.rollForce);
+        liftForce.set(0, state.torque, 0);
+
+        body.quaternion.vmult(angularVelocity, angularVelocity);
+        body.quaternion.vmult(liftForce, liftForce);
+
+        body.applyForce(liftForce, mainRotorPosition);
+
+        if (!angularVelocity.isZero()) {
+            body.angularVelocity.copy(angularVelocity);
+        }
+    };
+
+    const applyPhysics = () => {
+        model.position.copy(body.position as Vector3);
+        model.quaternion.copy(body.quaternion as Quat);
+    };
+
+    gModels.heli = {
+        scene: model,
+        methods: {
+            applyControls,
+            applyPhysics,
+            rotateRotors,
+        },
+    };
 }
 
 function init() {
     gWorld.addBody(bodies.terrain);
     // gScene.add(heightFieldToMesh(bodies.terrain));
 
-    utils.loadResource<HTMLImageElement>('../resources/images/skybox.jpg', '398 kB').then((img) => {
-        const skyBox = new CubeTexture(utils.sliceCubeTexture(img));
-        skyBox.needsUpdate = true;
+    Promise.all([
+        utils.loadResource<HTMLImageElement>('../assets/images/skybox.jpg', '398 kB'),
+        utils.loadResource<GLTF>('../assets/models/Heli.gltf'), // '164 kB'
+    ]).then(([
+        skyboxTexture,
+        heliModel,
+    ]) => {
+        setSceneBackground(skyboxTexture);
 
-        gScene.background = skyBox;
-    }).catch(e => console.error(e));
+        initHeli(heliModel);
 
-    utils.loadResource('collada', '../resources/models/ah6.dae').then((collada: any) => {
-        const model = collada.scene;
-        const body = bodies.heli;
-        const rotorMaterial = new MeshBasicMaterial({color: 0x555555});
-        const setRotation = {
-            main: (rad: number) => {},
-            tail: (rad: number) => {},
-        };
-
-        model.children.forEach((child: any) => {
-            switch (child.name) {
-                case 'MainRotor':
-                    child.material = rotorMaterial;
-                    setRotation.main = (rad) => child.rotation.z = rad;
-                    break;
-                case 'TailRotor':
-                    child.material = rotorMaterial;
-                    setRotation.tail = (rad) => child.rotation.x = rad;
-                    break;
-                case 'HeliBody':
-                    child.material.color.setHex(0xe4e4e4);
-                    break;
-                default:
-                    break;
-            }
-        });
-
-        body.position.set(0, 3, 0); // initial model position
-        body.linearDamping = 0.5;
-        body.angularDamping = 0.9;
-
-        gScene.add(model);
-        gWorld.addBody(body);
-
-        let rotation = 0;
-        const deg1 = Math.PI / 180;
-        const deg360 = Math.PI * 2;
-        const rotateRotors = (state: typeof gState) => {
-            const speed = deg1 * state.torque;
-            rotation = rotation > deg360 ? rotation - deg360 + speed : rotation + speed;
-
-            setRotation.main(-rotation);
-            setRotation.tail(-rotation);
-        };
-
-        const rotationForce = new Vec3();
-        const accelerationForce = new Vec3();
-        const mainRotorPosition = new Vec3();
-        const applyControls = (state: typeof gState) => {
-            rotationForce.set(state.pitchForce, state.yawForce, state.rollForce);
-            accelerationForce.set(0, state.torque, 0);
-            mainRotorPosition.set(body.position.x, body.position.y - 0.5, body.position.z);
-
-            body.quaternion.vmult(rotationForce, rotationForce);
-            body.quaternion.vmult(accelerationForce, accelerationForce);
-
-            body.applyForce(accelerationForce, mainRotorPosition);
-
-            if (!rotationForce.isZero()) {
-                body.angularVelocity.copy(rotationForce);
-            }
-        };
-
-        const applyPhysics = () => {
-            model.position.copy(body.position as Vector3);
-            model.quaternion.copy(body.quaternion as Quat);
-        };
-
-        gModels.heli = {
-            scene: model,
-            methods: {
-                applyControls,
-                applyPhysics,
-                rotateRotors,
-            },
-        };
+        if (true /* cfg.renderWireFrame */) {
+            cannonDebugRenderer(gScene, gWorld.bodies);
+        }
 
         switchCamera();
         render();
-    }).catch(e => console.error(e));
+    }).catch((err) => {
+        console.error(err);
+    });
 }
 
 function render() {
@@ -159,22 +176,18 @@ function render() {
         return;
     }
 
+    requestAnimationFrame(render);
+
+    gRenderer.render(gScene, gCamera);
+
     gWorld.step(_C.timeStep);
+    animateHeli();
 
     gState.update();
 
     hud.update({torque: gState.torque, altitude: gModels.heli.scene.position.y});
 
-    animateHeli();
     updateCamera();
-
-    // if (gDebugRenderer) {
-    //     gDebugRenderer.update();
-    // }
-
-    gRenderer.render(gScene, gCamera);
-
-    requestAnimationFrame(render);
 }
 
 function animateHeli() {
