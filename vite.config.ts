@@ -1,6 +1,7 @@
 import { defineConfig, Plugin } from 'vite';
 
 export default defineConfig({
+    publicDir: 'assets',
     plugins: [
         devServer_crossOriginIsolation(),
     ],

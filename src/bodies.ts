@@ -1,9 +1,10 @@
 import {
     Heightfield,
-Body,
-Box,
-Vec3,
-Cylinder, Quaternion
+    Body,
+    Box,
+    Vec3,
+    Cylinder,
+    Quaternion,
 } from 'cannon-es';
 
 const props = {
@@ -13,7 +14,7 @@ const props = {
     rotorBladeWidth: 0.2,
 };
 
-export default (function bodies () {
+export default (function bodies() {
     return {
         terrain: createTerrain(),
         heli: createHeliBody(),
@@ -42,8 +43,8 @@ export default (function bodies () {
 
         const mapRows = heightMap.length;
         const mapColumns = heightMap[0].length;
-        const terrainShape = new Heightfield(heightMap, {elementSize: 10});
-        const terrain = new Body({mass: 0, shape: terrainShape});
+        const terrainShape = new Heightfield(heightMap, { elementSize: 10 });
+        const terrain = new Body({ mass: 0, shape: terrainShape });
 
         terrain.quaternion.setFromAxisAngle(new Vec3(1, 0, 0), -Math.PI / 2);
         terrain.position.set(-mapRows * terrainShape.elementSize / 2, 0, mapColumns * terrainShape.elementSize / 2);
@@ -52,7 +53,7 @@ export default (function bodies () {
     }
 
     function createHeliBody() {
-        const heli = new Body({mass: props.modelMass});
+        const heli = new Body({ mass: props.modelMass });
         const landingSkidShape = new Box(new Vec3(0.1, 0.1, 1.8));
         const heliCenterShape = new Box(new Vec3(1, 1, 2));
         const heliTailShape = new Box(new Vec3(0.2, 0.2, 2));
@@ -74,7 +75,7 @@ export default (function bodies () {
             .addShape(heliTailShape, new Vec3(0, 0.5, 3.8))
             .addShape(heliRearShape, new Vec3(0, 0.5, 6.1))
             .addShape(heliWingShape, new Vec3(0, 1.9, 6.5))
-            .addShape(rotorCylinderShape, new Vec3(0, 1.5 , 0), quat);
+            .addShape(rotorCylinderShape, new Vec3(0, 1.5, 0), quat);
 
         return heli;
     }

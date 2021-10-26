@@ -17,14 +17,14 @@ interface Actions {
 }
 
 const keys = {
-    increaseTorque: '+',
-    decreaseTorque: '-',
-    pitchForward: 'w',
-    pitchBack: 's',
-    rollLeft: 'a',
-    rollRight: 'd',
-    yawLeft: 'q',
-    yawRight: 'e',
+    increaseTorque: 'Space',
+    decreaseTorque: 'Slash',
+    pitchForward: 'KeyW',
+    pitchBack: 'KeyS',
+    rollLeft: 'KeyA',
+    rollRight: 'KeyD',
+    yawLeft: 'KeyQ',
+    yawRight: 'KeyE',
 };
 
 Object.defineProperty(window, 'controls', {
@@ -33,7 +33,7 @@ Object.defineProperty(window, 'controls', {
     },
 });
 
-export default (function() {
+export default (() => {
     const keysPressed: Set<string> = new Set();
     const isKeyDown = (key: string) => keysPressed.has(key);
     let torque = 0;
@@ -44,15 +44,30 @@ export default (function() {
     let yawForce = 0;
     let yawSpeed = 0;
 
-    window.onkeydown = (e) => keysPressed.add(e.key) && preventPageScrolling(e);
-    window.onkeyup = (e) => keysPressed.delete(e.key);
+    window.onkeydown = (e: KeyboardEvent) => {
+        keysPressed.add(e.code);
+        preventPageScrolling(e);
+    };
+    window.onkeyup = (e: KeyboardEvent) => {
+        keysPressed.delete(e.code);
+    };
 
     const actions: Actions = {
-        increaseTorque: () => torque = Math.min(torque + constants.power, constants.maxTorque),
-        decreaseTorque: () => torque = Math.max(torque - constants.power, 0),
-        setPitch: (direction) => pitchForce = direction * Math.min(torque / 100, 1),
-        setRoll: (direction) => rollForce = direction * Math.min(torque / 100, 1),
-        setYaw: (direction) => yawForce = direction * Math.min(torque / 100, 1),
+        increaseTorque: () => {
+            torque = Math.min(torque + constants.power, constants.maxTorque);
+        },
+        decreaseTorque: () => {
+            torque = Math.max(torque - constants.power, 0);
+        },
+        setPitch: (direction) => {
+            pitchForce = direction * Math.min(torque / 100, 1);
+        },
+        setRoll: (direction) => {
+            rollForce = direction * Math.min(torque / 100, 1);
+        },
+        setYaw: (direction) => {
+            yawForce = direction * Math.min(torque / 100, 1);
+        },
     };
 
     function updateState() {
@@ -112,18 +127,18 @@ export default (function() {
 
 function preventPageScrolling(e: KeyboardEvent) {
     const navigationKeys = [
-        ' ', // 32
-        'PageUp', // 33
-        'PageDown', // 34
-        'End', // 35
-        'Home', // 36
-        'ArrowLeft', // 37
-        'ArrowUp', // 38
-        'ArrowRight', // 39
-        'ArrowDown', // 40
+        'Space',
+        'PageUp',
+        'PageDown',
+        'End',
+        'Home',
+        'ArrowLeft',
+        'ArrowUp',
+        'ArrowRight',
+        'ArrowDown',
     ];
 
-    if (navigationKeys.includes(e.key)) {
+    if (navigationKeys.includes(e.code)) {
         e.preventDefault();
     }
 }

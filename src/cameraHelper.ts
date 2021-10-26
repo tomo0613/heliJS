@@ -1,16 +1,16 @@
 import { Camera, Vector3, Matrix4 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-export default function (camera: Camera, domElement: HTMLCanvasElement) {
+export default (camera: Camera, domElement: HTMLCanvasElement) => {
     const orbitCamera = new OrbitControls(camera, domElement);
 
-    // orbitCamera.position0 = new Vector3(0, 5, 20); 
+    // orbitCamera.position0 = new Vector3(0, 5, 20);
     orbitCamera.minDistance = 10;
-//     orbitCamera.mouseButtons = {
-//         ORBIT: THREE.MOUSE.RIGHT,
-//         ZOOM: THREE.MOUSE.LEFT,
-//         PAN: THREE.MOUSE.MIDDLE,
-//     };
+    //     orbitCamera.mouseButtons = {
+    //         ORBIT: THREE.MOUSE.RIGHT,
+    //         ZOOM: THREE.MOUSE.LEFT,
+    //         PAN: THREE.MOUSE.MIDDLE,
+    //     };
 
     const dist = 20; // ToDo change on scroll
     const cameraTargetPosition = new Vector3();
@@ -28,7 +28,7 @@ export default function (camera: Camera, domElement: HTMLCanvasElement) {
         camera.lookAt(target.position);
     }
 
-    let cameraId = 0;
+    let cameraId = 1;
 
     function getNextCamera(target: THREE.Scene) {
         switch (cameraId++) {
@@ -57,4 +57,4 @@ export default function (camera: Camera, domElement: HTMLCanvasElement) {
     return {
         getNextCamera,
     };
-}
+};

@@ -1,16 +1,16 @@
 import { Quaternion, World, SAPBroadphase, Vec3 } from 'cannon-es';
 import cannonDebugRenderer from 'cannon-es-debugger';
-import { AmbientLight, CubeTexture, DirectionalLight, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
-
-import CameraHelper from './cameraHelper';
-import bodies from './bodies';
-import gState from './state';
-
-import HUD from './hud';
-import _C from './constants';
-import * as utils from './utils';
+import {
+    AmbientLight, CubeTexture, DirectionalLight, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer,
+} from 'three';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 
+import bodies from './bodies';
+import CameraHelper from './cameraHelper';
+import _C from './constants';
+import HUD from './hud';
+import gState from './state';
+import * as utils from './utils';
 
 type Vector3 = Vec3 & THREE.Vector3;
 type Quat = Quaternion & THREE.Quaternion;
@@ -21,14 +21,14 @@ type Heli = {
         applyControls(state: typeof gState): void;
         applyPhysics(): void;
         rotateRotors(state: typeof gState): void;
-    }
+    };
 };
 
 interface Models {
     heli?: Heli;
 }
 
-let paused: boolean = false;
+let paused = false;
 
 const gWorld = new World();
 gWorld.gravity.set(_C.gravity.x, _C.gravity.y, _C.gravity.z);
@@ -36,7 +36,7 @@ gWorld.broadphase = new SAPBroadphase(gWorld);
 
 const gScene = new Scene();
 const gCamera = new PerspectiveCamera(45, getAspectRatio(), 0.1, 1000);
-const gRenderer = new WebGLRenderer(/*{antialias: true}*/);
+const gRenderer = new WebGLRenderer(/* {antialias: true} */);
 gRenderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(gRenderer.domElement);
 const cameraHelper = CameraHelper(gCamera, gRenderer.domElement);
@@ -52,11 +52,11 @@ const gModels: Models = {};
 const hud = HUD();
 document.body.appendChild(hud.domElement);
 
-let updateCamera = () => {};
+let updateCamera = utils.noop;
 
 init();
 
-function switchCamera () {
+function switchCamera() {
     updateCamera = cameraHelper.getNextCamera(gModels.heli.scene as any);
 }
 
@@ -69,21 +69,25 @@ function setSceneBackground(skyboxTexture: HTMLImageElement) {
 
 function initHeli({ scene: model }: GLTF) {
     const body = bodies.heli;
-    const rotorMaterial = new MeshBasicMaterial({color: 0x555555});
+    const rotorMaterial = new MeshBasicMaterial({ color: 0x555555 });
     const setRotation = {
-        main: (rad: number) => {},
-        tail: (rad: number) => {},
+        main: utils.noop as (rotation: number) => void,
+        tail: utils.noop as (rotation: number) => void,
     };
 
     model.children.forEach((child: any) => {
         switch (child.name) {
             case 'MainRotor':
                 child.material = rotorMaterial;
-                setRotation.main = (rad) => child.rotation.y = rad;
+                setRotation.main = (rad) => {
+                    child.rotation.y = rad;
+                };
                 break;
             case 'TailRotor':
                 child.material = rotorMaterial;
-                setRotation.tail = (rad) => child.rotation.x = rad;
+                setRotation.tail = (rad) => {
+                    child.rotation.x = rad;
+                };
                 break;
             case 'HeliBody':
                 // child.material.color.setHex(0xe4e4e4);
@@ -150,8 +154,8 @@ function init() {
     // gScene.add(heightFieldToMesh(bodies.terrain));
 
     Promise.all([
-        utils.loadResource<HTMLImageElement>('../assets/images/skybox.jpg', '398 kB'),
-        utils.loadResource<GLTF>('../assets/models/Heli.gltf'), // '164 kB'
+        utils.loadResource<HTMLImageElement>('images/skybox.jpg', '398 kB'),
+        utils.loadResource<GLTF>('models/Heli.gltf', '164 kB'),
     ]).then(([
         skyboxTexture,
         heliModel,
@@ -165,19 +169,13 @@ function init() {
         }
 
         switchCamera();
-        render();
+        gRenderer.setAnimationLoop(animationLoop);
     }).catch((err) => {
         console.error(err);
     });
 }
 
-function render() {
-    if (paused) {
-        return;
-    }
-
-    requestAnimationFrame(render);
-
+function animationLoop() {
     gRenderer.render(gScene, gCamera);
 
     gWorld.step(_C.timeStep);
@@ -185,7 +183,7 @@ function render() {
 
     gState.update();
 
-    hud.update({torque: gState.torque, altitude: gModels.heli.scene.position.y});
+    hud.update({ torque: gState.torque, altitude: gModels.heli.scene.position.y });
 
     updateCamera();
 }
@@ -209,19 +207,17 @@ function windowResizeHandler() {
 window.onresize = utils.debounce(windowResizeHandler, 500);
 
 window.addEventListener('keyup', (e) => {
-    // if (e.key === 'h') console.log('h');
-
-    if (e.key === 'c') {
+    if (e.code === 'KeyC') {
         switchCamera();
     }
 
-    if (e.key === 'p') {
+    if (e.code === 'KeyP') {
         if (paused) {
             paused = false;
-            render();
+            gRenderer.setAnimationLoop(animationLoop);
         } else {
             paused = true;
-            console.info('Pause');
+            gRenderer.setAnimationLoop(null);
         }
     }
 });
