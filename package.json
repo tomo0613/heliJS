@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "start": "npx vite",
-    "build": "npx tsc && vite build --config vite.buildConfig.ts",
+    "build": "npx tsc && npx vite build --config vite.buildConfig.ts",
     "preview": "npx vite preview",
     "lint": "npx eslint src/**",
     "lint:fix": "npm run lint --fix",

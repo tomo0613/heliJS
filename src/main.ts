@@ -1,7 +1,7 @@
 import { Quaternion, World, SAPBroadphase, Vec3 } from 'cannon-es';
 import cannonDebugRenderer from 'cannon-es-debugger';
 import {
-    AmbientLight, CubeTexture, DirectionalLight, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer,
+    AmbientLight, Clock, CubeTexture, DirectionalLight, MeshBasicMaterial, PerspectiveCamera, Scene, WebGLRenderer,
 } from 'three';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 
@@ -30,6 +30,7 @@ interface Models {
 
 let paused = false;
 
+const gClock = new Clock();
 const gWorld = new World();
 gWorld.gravity.set(_C.gravity.x, _C.gravity.y, _C.gravity.z);
 gWorld.broadphase = new SAPBroadphase(gWorld);
@@ -52,13 +53,7 @@ const gModels: Models = {};
 const hud = HUD();
 document.body.appendChild(hud.domElement);
 
-let updateCamera = utils.noop;
-
 init();
-
-function switchCamera() {
-    updateCamera = cameraHelper.getNextCamera(gModels.heli.scene as any);
-}
 
 function setSceneBackground(skyboxTexture: HTMLImageElement) {
     const skyBox = new CubeTexture(utils.sliceCubeTexture(skyboxTexture));
@@ -103,6 +98,7 @@ function initHeli({ scene: model }: GLTF) {
 
     gScene.add(model);
     gWorld.addBody(body);
+    cameraHelper.setCameraTarget(model);
 
     let rotation = 0;
     const deg1 = Math.PI / 180;
@@ -168,7 +164,6 @@ function init() {
             cannonDebugRenderer(gScene, gWorld.bodies);
         }
 
-        switchCamera();
         gRenderer.setAnimationLoop(animationLoop);
     }).catch((err) => {
         console.error(err);
@@ -176,16 +171,18 @@ function init() {
 }
 
 function animationLoop() {
+    const delta = gClock.getDelta();
+
     gRenderer.render(gScene, gCamera);
 
-    gWorld.step(_C.timeStep);
+    gWorld.step(_C.timeStep, delta);
     animateHeli();
 
     gState.update();
 
     hud.update({ torque: gState.torque, altitude: gModels.heli.scene.position.y });
 
-    updateCamera();
+    cameraHelper.update(delta);
 }
 
 function animateHeli() {
@@ -208,7 +205,7 @@ window.onresize = utils.debounce(windowResizeHandler, 500);
 
 window.addEventListener('keyup', (e) => {
     if (e.code === 'KeyC') {
-        switchCamera();
+        cameraHelper.switchCameraMode();
     }
 
     if (e.code === 'KeyP') {
